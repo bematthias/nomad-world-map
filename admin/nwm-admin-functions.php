@@ -14,6 +14,9 @@ add_action( 'wp_ajax_find_post_title', 'nwm_find_post_title' );
 add_action( 'save_post', 'nwm_check_used_id' );
 add_filter( 'wp_loaded', 'nwm_load_textdomain' );
 
+$role_edit = 'nwm_edit_locations';
+$role_manage = 'nwm_manage_settings';
+
 /* Prevent headers already send after using wp_redirect */
 function nwm_output_buffer() {
 	ob_start();
@@ -36,17 +39,19 @@ function nwm_init() {
 }
 
 function nwm_create_admin_menu() {
-	add_menu_page( 'Nomad Map', 'Nomad Map', 'manage_options', 'nwm_map_editor', 'nwm_map_editor' );
-	add_submenu_page( 'nwm_map_editor', __( 'Route Editor', 'nwm' ), __( 'Route Editor', 'nwm' ), 'manage_options', 'nwm_map_editor', 'nwm_map_editor' );
-	add_submenu_page( 'nwm_map_editor', __( 'Manage Maps', 'nwm' ), __( 'Manage Maps', 'nwm' ), 'manage_options', 'nwm_manage_maps', 'nwm_manage_maps' );
-	add_submenu_page( 'nwm_map_editor', __( 'Settings', 'nwm' ), __( 'Settings', 'nwm' ), 'manage_options', 'nwm_settings', 'nwm_settings_page' );
-	add_submenu_page( 'nwm_map_editor', __( 'FAQ', 'nwm' ), __( 'FAQ', 'nwm' ), 'manage_options', 'nwm_faq', 'nwm_faq' );
+	global $role_edit, $role_manage;
+
+	add_menu_page( 'Nomad Map', 'Nomad Map', $role_edit, 'nwm_map_editor', 'nwm_map_editor' );
+	add_submenu_page( 'nwm_map_editor', __( 'Route Editor', 'nwm' ), __( 'Route Editor', 'nwm' ), $role_edit, 'nwm_map_editor', 'nwm_map_editor' );
+	add_submenu_page( 'nwm_map_editor', __( 'Manage Maps', 'nwm' ), __( 'Manage Maps', 'nwm' ), $role_manage, 'nwm_manage_maps', 'nwm_manage_maps' );
+	add_submenu_page( 'nwm_map_editor', __( 'Settings', 'nwm' ), __( 'Settings', 'nwm' ), $role_manage, 'nwm_settings', 'nwm_settings_page' );
+	add_submenu_page( 'nwm_map_editor', __( 'FAQ', 'nwm' ), __( 'FAQ', 'nwm' ), $role_edit, 'nwm_faq', 'nwm_faq' );
 }
 
 /* Save a new location */
 function nwm_save_location() {
-
-	if ( !current_user_can( 'manage_options' ) )
+	global $role_edit;
+	if ( !current_user_can( $role_edit ) )
 		die( '-1' );
 	check_ajax_referer( 'nwm_nonce_save' );
 
@@ -194,13 +199,13 @@ function nwm_get_thumb_id( $recieved_data ) {
 /* Delete a single location */
 function nwm_delete_location() {
 
-	global $wpdb;
+	global $wpdb, $role_edit;;
 
 	$nwm_id  = absint( $_POST['nwm_id'] );
 	$post_id = absint( $_POST['post_id'] );
 	$map_id  = absint( $_POST['map_id'] );
 
-	if ( !current_user_can( 'manage_options' ) )
+	if ( !current_user_can( $role_edit ) )
 		die( '-1' );
 	check_ajax_referer( 'nwm_nonce_delete_'.$nwm_id );
 
@@ -271,14 +276,14 @@ function nwm_remove_option_value( $option_name, $map_id, $target_id ) {
 /* Update the location data */
 function nwm_update_location() {
 
-	global $wpdb;
+	global $wpdb, $role_edit;
 
 	$recieved_data = json_decode( stripslashes( $_POST['last_update'] ) );
 	$nwm_id        = absint( $recieved_data->nwm_id );
 	$map_id        = absint( $recieved_data->map_id );
 	$thumb_id      = nwm_get_thumb_id( $recieved_data );
 
-	if ( !current_user_can( 'manage_options' ) )
+	if ( !current_user_can( $role_edit ) )
 		die( '-1' );
 	check_ajax_referer( 'nwm_nonce_update_'.$nwm_id );
 
@@ -453,8 +458,9 @@ function nwm_check_custom_delete( $recieved_data, $nwm_id ) {
 
 /* Update the option field for the route order and the used wp post ids */
 function nwm_update_order() {
+	global $role_edit;
 
-	if ( !current_user_can( 'manage_options' ) )
+	if ( !current_user_can( $role_edit ) )
 		die( '-1' );
 	check_ajax_referer( 'nwm_nonce_sort' );
 
@@ -527,11 +533,11 @@ function nwm_update_location_query( $location_data ) {
 /* Load the custom content for the currently edited location */
 function nwm_load_content() {
 
-	global $wpdb;
+	global $wpdb, $role_edit;
 
 	$nwm_id = absint( $_POST['nwm_id'] );
 
-	if ( !current_user_can( 'manage_options' ) )
+	if ( !current_user_can( $role_edit ) )
 		die( '-1' );
 	check_ajax_referer( 'nwm_nonce_load_'.$nwm_id );
 
@@ -641,9 +647,9 @@ function nwm_insert_location( $location_data ) {
 /* Try to find a blog post that matches with the provided title */
 function nwm_find_post_title() {
 
-	global $wpdb;
+	global $wpdb, $role_edit;
 
-	if ( !current_user_can( 'manage_options' ) )
+	if ( !current_user_can( $role_edit ) )
 		die( '-1' );
 	check_ajax_referer( 'nwm_nonce_search' );
 
@@ -733,9 +739,11 @@ function nwm_find_post_title() {
 /* Load the route data for the selected map */
 function nwm_load_map() {
 
+	global $role_edit;
+
 	$nwm_map_id = absint( $_POST['map_id'] );
 
-	if ( !current_user_can( 'manage_options' ) )
+	if ( !current_user_can( $role_edit ) )
 		die( '-1' );
 	check_ajax_referer( 'nwm_map_list' );
 

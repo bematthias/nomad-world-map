@@ -3,7 +3,7 @@
 Plugin Name: Nomad World Map
 Plugin URI: http://nomadworldmap.com/
 Description: Create your own custom travel map. Link locations on the map to blog posts and share your travel plans.
-Version: 1.3.1
+Version: 1.3.2
 Author: Nomad World Map
 Author URI: http://nomadworldmap.com/
 License: GPLv2
@@ -88,11 +88,38 @@ function nwm_define_tables() {
 /* On activation create the required db table and set the default options */
 function nwm_activate() {
 	require 'admin/nwm-install.php';
+	nwm_add_cap();
 }
 
 /* If the plugin is deactivated, delete the transient form the db */
 function nwm_deactivate() {
 	delete_transient('nwm_locations');
+	nwm_remove_cap();
+}
+
+// Add the new capability to all roles having a certain built-in capability
+function nwm_add_cap() {
+	$roles = get_editable_roles();
+	foreach ($GLOBALS['wp_roles']->role_objects as $key => $role) {
+		if (isset($roles[$key]) && $role->has_cap('publish_pages')) {
+			$role->add_cap('nwm_edit_locations');
+		}
+		if (isset($roles[$key]) && $role->has_cap('manage_options')) {
+			$role->add_cap('nwm_manage_settings');
+		}
+	}
+}
+
+function nwm_remove_cap() {
+	$roles = get_editable_roles();
+	foreach ($GLOBALS['wp_roles']->role_objects as $key => $role) {
+		if (isset($roles[$key]) && $role->has_cap('nwm_edit_locations')) {
+			$role->remove_cap('nwm_edit_locations');
+		}
+		if (isset($roles[$key]) && $role->has_cap('nwm_manage_settings')) {
+			$role->remove_cap('nwm_manage_settings');
+		}
+	}
 }
 
 ?>
